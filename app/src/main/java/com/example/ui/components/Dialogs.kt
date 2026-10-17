@@ -226,6 +226,7 @@ fun AddMilestoneDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTaskDialog(
     goals: List<com.example.data.model.GoalItem> = emptyList(),
@@ -275,26 +276,49 @@ fun AddTaskDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Optional Link to Goal
+                // Optional Link to Goal dropdown
                 if (goals.isNotEmpty()) {
-                    Text("Link to Goal (Optional)", style = MaterialTheme.typography.labelSmall, color = RadiantGold, fontWeight = FontWeight.Bold)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    var expandedGoalDropdown by remember { mutableStateOf(false) }
+                    val selectedGoal = goals.find { it.id == selectedGoalId }
+                    val selectedGoalTitle = selectedGoal?.title ?: "None (No goal linked)"
+
+                    Text("Link to goal (Optional)", style = MaterialTheme.typography.labelSmall, color = RadiantGold, fontWeight = FontWeight.Bold)
+
+                    ExposedDropdownMenuBox(
+                        expanded = expandedGoalDropdown,
+                        onExpandedChange = { expandedGoalDropdown = it },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        FilterChip(
-                            selected = selectedGoalId == null,
-                            onClick = { selectedGoalId = null },
-                            label = { Text("None", fontSize = 11.sp) }
+                        OutlinedTextField(
+                            value = selectedGoalTitle,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Link to goal") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedGoalDropdown) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
                         )
-                        goals.take(3).forEach { g ->
-                            FilterChip(
-                                selected = selectedGoalId == g.id,
-                                onClick = { selectedGoalId = g.id },
-                                label = { Text(g.title.take(15) + if (g.title.length > 15) "..." else "", fontSize = 11.sp) }
+                        ExposedDropdownMenu(
+                            expanded = expandedGoalDropdown,
+                            onDismissRequest = { expandedGoalDropdown = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("None (No goal linked)") },
+                                onClick = {
+                                    selectedGoalId = null
+                                    expandedGoalDropdown = false
+                                }
                             )
+                            goals.forEach { g ->
+                                DropdownMenuItem(
+                                    text = { Text(g.title) },
+                                    onClick = {
+                                        selectedGoalId = g.id
+                                        expandedGoalDropdown = false
+                                    }
+                                )
+                            }
                         }
                     }
 
@@ -302,7 +326,9 @@ fun AddTaskDialog(
                         OutlinedTextField(
                             value = goalContributionInput,
                             onValueChange = { goalContributionInput = it },
-                            label = { Text("Contributes to Goal (+N)") },
+                            label = { Text("Contributes: +N") },
+                            placeholder = { Text("1.0") },
+                            singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

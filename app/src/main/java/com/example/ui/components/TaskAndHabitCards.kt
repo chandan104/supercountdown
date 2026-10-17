@@ -166,6 +166,11 @@ fun TaskCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .then(
+                if (task.scheduledTimeMinutes != null || isMinuteBased) {
+                    Modifier.clickable { onOpenFocusTimer() }
+                } else Modifier
+            )
             .testTag("task_card_${task.id}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -378,10 +383,12 @@ fun TaskCard(
                 }
             }
 
-            // Section 9.2 Android System Clock Alarm Action Button
+            // Section 9.2 Android System & In-App Alarm Action Button
             if (task.scheduledTimeMinutes != null) {
                 val hour = task.scheduledTimeMinutes / 60
                 val min = task.scheduledTimeMinutes % 60
+                val timeStr = String.format("%02d:%02d", hour, min)
+                val isAlarmActive = task.alarmEnabled || task.reminderEnabled
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     modifier = Modifier
@@ -392,25 +399,28 @@ fun TaskCard(
                     OutlinedButton(
                         onClick = { onTriggerAlarmInClock(hour, min, task.title) },
                         modifier = Modifier
-                            .height(30.dp)
+                            .defaultMinSize(minHeight = 48.dp)
                             .testTag("btn_set_alarm_${task.id}"),
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, RadiantGold.copy(alpha = 0.6f)),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (isAlarmActive) RadiantGold.copy(alpha = 0.15f) else Color.Transparent
+                        ),
+                        border = BorderStroke(1.dp, if (isAlarmActive) RadiantGold else RadiantGold.copy(alpha = 0.5f)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Alarm,
-                            contentDescription = "Set in Clock",
+                            contentDescription = "Set alarm for $timeStr",
                             tint = RadiantGold,
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(15.dp)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Set Alarm in Clock",
+                            text = if (isAlarmActive) "Alarm Active ($timeStr)" else "Set Alarm ($timeStr)",
                             style = MaterialTheme.typography.labelSmall,
                             color = RadiantGold,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp
+                            fontSize = 11.sp
                         )
                     }
                 }

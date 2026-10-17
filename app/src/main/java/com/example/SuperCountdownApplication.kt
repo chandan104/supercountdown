@@ -10,6 +10,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+import android.media.AudioAttributes
+import android.media.RingtoneManager
+
 class SuperCountdownApplication : Application() {
 
     override fun onCreate() {
@@ -23,22 +26,47 @@ class SuperCountdownApplication : Application() {
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelId = CHANNEL_ID_REMINDERS
-            val name = getString(R.string.notification_channel_name)
-            val descriptionText = getString(R.string.notification_channel_desc)
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(channelId, name, importance).apply {
-                description = descriptionText
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            // Alarm channel: Loud audio alarm sound, persistent vibration, high importance
+            val alarmSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val audioAttributes = AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .build()
+
+            val alarmChannel = NotificationChannel(
+                CHANNEL_ID_ALARMS,
+                "Super 2027 Alarms & Critical Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "High-priority alarms and scheduled milestone alerts with sound and vibration"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 500, 200, 500, 200, 500)
+                setSound(alarmSoundUri, audioAttributes)
+                setShowBadge(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            }
+            notificationManager.createNotificationChannel(alarmChannel)
+
+            // Reminder channel: Daily briefings and progress updates
+            val reminderChannel = NotificationChannel(
+                CHANNEL_ID_REMINDERS,
+                getString(R.string.notification_channel_name),
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = getString(R.string.notification_channel_desc)
                 enableVibration(true)
                 setShowBadge(true)
             }
-            val notificationManager: NotificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(reminderChannel)
         }
     }
 
     companion object {
+        const val CHANNEL_ID_ALARMS = "super_countdown_alarms"
         const val CHANNEL_ID_REMINDERS = "super_countdown_reminders"
     }
 }

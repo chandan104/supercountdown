@@ -160,3 +160,27 @@ data class DailyProgressStats(
     val activeGoalsCount: Int,
     val upcomingMilestonesCount: Int
 )
+
+enum class ConflictType {
+    EXCESSIVE_DAILY_LOAD,
+    TIME_OVERLAP,
+    PRIORITY_DISCORD,
+    DEADLINE_COLLISION
+}
+
+enum class ConflictSeverity {
+    LOW,
+    MODERATE,
+    CRITICAL
+}
+
+data class GoalConflict(
+    val id: String,
+    val title: String,
+    val conflictType: ConflictType,
+    val description: String,
+    val affectedItems: List<String>,
+    val suggestedOptimization: String,
+    val severity: ConflictSeverity
+)
+

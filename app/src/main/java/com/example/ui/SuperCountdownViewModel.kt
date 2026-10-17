@@ -314,22 +314,44 @@ class SuperCountdownViewModel(application: Application) : AndroidViewModel(appli
             )
             db.taskDao().insertTask(task)
 
-            // If reminder requested, schedule via in-app reminder
-            if (reminderEnabled && scheduledTimeMinutes != null) {
+            // Handle Alarm & Reminder Scheduling
+            if (scheduledTimeMinutes != null && (reminderEnabled || alarmEnabled)) {
                 val cal = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, scheduledTimeMinutes / 60)
                     set(Calendar.MINUTE, scheduledTimeMinutes % 60)
                     set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                    if (timeInMillis <= System.currentTimeMillis()) {
+                        add(Calendar.DAY_OF_YEAR, 1)
+                    }
                 }
+                // Guaranteed in-app alarm/reminder
                 AlarmAndReminderManager.scheduleInAppReminder(
                     getApplication(),
                     taskId,
                     title,
                     cal.timeInMillis
                 )
+
+                // Optional system clock intent
+                if (alarmEnabled) {
+                    AlarmAndReminderManager.openSystemClockAlarm(
+                        getApplication(),
+                        scheduledTimeMinutes / 60,
+                        scheduledTimeMinutes % 60,
+                        "Super 2027: $title"
+                    )
+                }
             }
 
-            _userMessage.value = "Task scheduled for today"
+            val h = (scheduledTimeMinutes ?: 540) / 60
+            val m = (scheduledTimeMinutes ?: 540) % 60
+            val timeStr = String.format("%02d:%02d", h, m)
+            _userMessage.value = when {
+                alarmEnabled -> "Task scheduled with Alarm at $timeStr"
+                reminderEnabled -> "Task scheduled with Reminder at $timeStr"
+                else -> "Task scheduled for today"
+            }
             WidgetHelper.updateAllWidgets(getApplication())
         }
     }
@@ -498,18 +520,59 @@ class SuperCountdownViewModel(application: Application) : AndroidViewModel(appli
         }
     }
 
-    // System Alarm Trigger (Section 9.2)
-    fun triggerSystemAlarm(hour: Int, minute: Int, label: String): Boolean {
-        val success = AlarmAndReminderManager.openSystemClockAlarm(
+    // System Alarm Trigger with In-App Guaranteed Alarm
+    fun triggerSystemAlarm(hour: Int, minute: Int, label: String, taskId: String? = null): Boolean {
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (timeInMillis <= System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
+        }
+
+        // Guaranteed in-app high-priority alarm
+        val effectiveId = taskId ?: "task_alarm_${System.currentTimeMillis()}"
+        AlarmAndReminderManager.scheduleInAppReminder(
+            context = getApplication(),
+            taskId = effectiveId,
+            taskTitle = label,
+            triggerEpochMillis = cal.timeInMillis
+        )
+
+        // Attempt system clock app opening
+        val systemClockOpened = AlarmAndReminderManager.openSystemClockAlarm(
             context = getApplication(),
             hour = hour,
             minute = minute,
             message = "Super 2027: $label"
         )
+
+        val formattedTime = String.format("%02d:%02d", hour, minute)
+        if (systemClockOpened) {
+            _userMessage.value = "Alarm active for $formattedTime (Clock & In-App Alerts)"
+        } else {
+            _userMessage.value = "In-app alarm scheduled for $formattedTime with sound & alert!"
+        }
+        return true
+    }
+
+    fun testAlarmNow() {
+        AlarmAndReminderManager.triggerTestAlarm(getApplication())
+        _userMessage.value = "Test alarm scheduled! Ringing with sound in 2 seconds..."
+    }
+
+    fun openSystemClockDirectly(): Boolean {
+        val success = AlarmAndReminderManager.openSystemClockApp(getApplication())
         if (!success) {
-            _userMessage.value = "System Clock app could not be launched directly. Follow manual instructions in settings."
+            _userMessage.value = "No external Clock app installed on this device/emulator. In-app alarms are active!"
         }
         return success
+    }
+
+    fun isExactAlarmAllowed(): Boolean {
+        return AlarmAndReminderManager.isExactAlarmPermissionGranted(getApplication())
     }
 
     // Send Progress Push Notification

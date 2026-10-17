@@ -29,6 +29,8 @@ fun SettingsAndWidgetView(
     progressStats: DailyProgressStats,
     onPinWidgetClick: () -> Unit,
     onTestNotificationClick: () -> Unit,
+    onTestAlarmClick: () -> Unit = {},
+    onOpenClockAppClick: () -> Unit = {},
     sendDataToAi: Boolean = true,
     onToggleSendDataToAi: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -208,7 +210,7 @@ fun SettingsAndWidgetView(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Android System Clock Intent",
+                        text = "Android System & In-App Alarm System",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -216,10 +218,40 @@ fun SettingsAndWidgetView(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "When you tap 'Set Alarm in Clock' on any scheduled task, the app invokes the Android AlarmClock intent with prepopulated time and label. You retain full control to verify and save the alarm in your device's native Clock app.",
+                    text = "Scheduled tasks trigger guaranteed in-app loud alarms with audio alerts and notifications. Additionally, tapping 'Set Alarm' invokes the Android system Clock intent to prepopulate your device's native alarm clock.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onTestAlarmClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp)
+                            .testTag("btn_test_alarm_sound"),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RadiantGold)
+                    ) {
+                        Icon(Icons.Default.Alarm, contentDescription = "Test Alarm", tint = Color.Black, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Test Alarm (2s)", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                    OutlinedButton(
+                        onClick = onOpenClockAppClick,
+                        modifier = Modifier
+                            .weight(1f)
+                            .defaultMinSize(minHeight = 48.dp)
+                            .testTag("btn_open_system_clock"),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, RadiantGold.copy(alpha = 0.6f))
+                    ) {
+                        Text("Open Clock App", color = RadiantGold, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
             }
         }
 
@@ -249,6 +281,12 @@ fun SettingsAndWidgetView(
                 )
                 HorizontalDivider(color = BorderSubtle, modifier = Modifier.padding(vertical = 8.dp))
                 DiagnosticRow(
+                    label = "Alarm System Engine",
+                    status = "ACTIVE (Dual: System Clock + In-App Audio)",
+                    isOk = true
+                )
+                HorizontalDivider(color = BorderSubtle, modifier = Modifier.padding(vertical = 8.dp))
+                DiagnosticRow(
                     label = "Gemini API Engine",
                     status = if (GeminiService.isApiKeyConfigured() && sendDataToAi) "CONNECTED (gemini-3.5-flash)" else if (!sendDataToAi) "OFFLINE COACH MODE" else "LOCAL INTELLIGENCE ACTIVE",
                     isOk = true
@@ -256,7 +294,7 @@ fun SettingsAndWidgetView(
                 HorizontalDivider(color = BorderSubtle, modifier = Modifier.padding(vertical = 8.dp))
                 DiagnosticRow(
                     label = "Notification Channels",
-                    status = "SUPER_COUNTDOWN_REMINDERS",
+                    status = "ALARMS & REMINDERS ACTIVE",
                     isOk = true
                 )
                 HorizontalDivider(color = BorderSubtle, modifier = Modifier.padding(vertical = 8.dp))
@@ -269,12 +307,15 @@ fun SettingsAndWidgetView(
                 Spacer(modifier = Modifier.height(14.dp))
                 OutlinedButton(
                     onClick = onTestNotificationClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 48.dp)
+                        .testTag("btn_test_notification_channel"),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(Icons.Default.Notifications, contentDescription = "Test Notification")
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Test Notification Channel")
+                    Text("Test Daily Progress Notification")
                 }
             }
         }

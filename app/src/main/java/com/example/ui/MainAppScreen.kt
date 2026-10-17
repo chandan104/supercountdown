@@ -277,6 +277,13 @@ fun MainAppScreen(
                                 viewModel.sendProgressNotification()
                             }
                         },
+                        onTestAlarmClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                            viewModel.testAlarmNow()
+                        },
+                        onOpenClockAppClick = { viewModel.openSystemClockDirectly() },
                         sendDataToAi = sendDataToAi,
                         onToggleSendDataToAi = { viewModel.setSendDataToAi(it) }
                     )

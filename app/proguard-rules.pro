@@ -19,3 +19,18 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Room SQLite database rules
+-keep class androidx.room.** { *; }
+-dontwarn androidx.room.**
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class * { *; }
+-keep @androidx.room.Dao class * { *; }
+
+# Data Models
+-keep class com.example.data.model.** { *; }
+-keepclassmembers class com.example.data.model.** { *; }
+
+# Coroutines and Serialization
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-dontwarn kotlinx.coroutines.**

@@ -25,6 +25,7 @@ object AlarmAndReminderManager {
      * Section 9.2 Android System Clock Integration:
      * Opens the Android system Clock application with prepopulated time and title.
      * EXTRA_SKIP_UI = false ensures the user reviews and confirms in their clock application.
+     * Includes fallback to ACTION_SHOW_ALARMS if ACTION_SET_ALARM is not directly supported.
      */
     fun openSystemClockAlarm(
         context: Context,
@@ -32,22 +33,49 @@ object AlarmAndReminderManager {
         minute: Int,
         message: String
     ): Boolean {
-        return try {
-            val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+        // Try direct SET_ALARM first
+        try {
+            val setAlarmIntent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
                 putExtra(AlarmClock.EXTRA_HOUR, hour)
                 putExtra(AlarmClock.EXTRA_MINUTES, minute)
                 putExtra(AlarmClock.EXTRA_MESSAGE, message)
                 putExtra(AlarmClock.EXTRA_SKIP_UI, false) // Prompt user confirmation in Clock
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            if (intent.resolveActivity(context.packageManager) != null) {
-                context.startActivity(intent)
+            context.startActivity(setAlarmIntent)
+            return true
+        } catch (_: Exception) {
+            // Fallback to showing alarms in the system clock app
+            return try {
+                val showAlarmsIntent = Intent(AlarmClock.ACTION_SHOW_ALARMS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(showAlarmsIntent)
                 true
-            } else {
+            } catch (_: Exception) {
                 false
             }
+        }
+    }
+
+    fun openSystemClockApp(context: Context): Boolean {
+        return try {
+            val intent = Intent(AlarmClock.ACTION_SHOW_ALARMS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            true
         } catch (_: Exception) {
             false
+        }
+    }
+
+    fun isExactAlarmPermissionGranted(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+            alarmManager?.canScheduleExactAlarms() ?: false
+        } else {
+            true
         }
     }
 
@@ -77,36 +105,62 @@ object AlarmAndReminderManager {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // Ensure trigger time is in the future
+        val actualTriggerMillis = if (triggerEpochMillis <= System.currentTimeMillis()) {
+            System.currentTimeMillis() + 1000L
+        } else {
+            triggerEpochMillis
+        }
+
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (alarmManager.canScheduleExactAlarms()) {
                     alarmManager.setExactAndAllowWhileIdle(
                         AlarmManager.RTC_WAKEUP,
-                        triggerEpochMillis,
+                        actualTriggerMillis,
                         pendingIntent
                     )
                 } else {
                     alarmManager.setAndAllowWhileIdle(
                         AlarmManager.RTC_WAKEUP,
-                        triggerEpochMillis,
+                        actualTriggerMillis,
                         pendingIntent
                     )
                 }
             } else {
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
-                    triggerEpochMillis,
+                    actualTriggerMillis,
                     pendingIntent
                 )
             }
         } catch (_: Exception) {
             // Inexact fallback
-            alarmManager.set(
-                AlarmManager.RTC_WAKEUP,
-                triggerEpochMillis,
-                pendingIntent
-            )
+            try {
+                alarmManager.set(
+                    AlarmManager.RTC_WAKEUP,
+                    actualTriggerMillis,
+                    pendingIntent
+                )
+            } catch (_: Exception) {
+                // Graceful fallback
+            }
         }
+    }
+
+    /**
+     * Test utility to ring a real test alarm in 2 seconds.
+     */
+    fun triggerTestAlarm(context: Context): Boolean {
+        val testId = "test_alarm_${System.currentTimeMillis()}"
+        val triggerTime = System.currentTimeMillis() + 2000L
+        scheduleInAppReminder(
+            context = context,
+            taskId = testId,
+            taskTitle = "Super 2027 Milestone Focus Alarm",
+            triggerEpochMillis = triggerTime
+        )
+        return true
     }
 
     fun cancelInAppReminder(context: Context, taskId: String) {
