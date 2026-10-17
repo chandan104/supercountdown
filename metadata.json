@@ -1,0 +1,6 @@
+{
+  "name": "Super 2027 Countdown",
+  "description": "Personal productivity and countdown app for 2027 with dynamic New Year timer, custom events, goals, milestones, tasks, habits, Android home screen widget, system clock alarm, and Gemini AI coach.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
